@@ -413,13 +413,7 @@
 
       <!-- LINKS -->
       <div class="links">
-        <a
-          id="profilePdf"
-          href="assets/Docs/Art%20Corners%20-%20Profile.pdf"
-          class="link-btn"
-          target="_blank"
-          rel="noopener noreferrer"
-        >
+        <a id="profilePdf" href="#" class="link-btn" onclick="openPdf(event)">
           <span class="link-icon"><i class="fa-regular fa-user"></i></span>
           <span class="link-label">Company Profile</span>
           <i class="fa-solid fa-chevron-left link-arrow"></i>
@@ -544,6 +538,18 @@
 
       <p class="footer">© 2026 ArtCorners Design</p>
     </div>
+    <script>
+      function openPdf(e) {
+        e.preventDefault();
+        var pdf =
+          "https://artcorners.github.io/ArtCorners_SocialMedia/assets/Docs/Art%20Corners%20-%20Profile.pdf";
+        var isIOS = /iPhone|iPad|iPod/i.test(navigator.userAgent);
+        var url = isIOS
+          ? "https://docs.google.com/viewer?url=" + encodeURIComponent(pdf)
+          : pdf;
+        window.open(url, "_blank");
+      }
+    </script>
     <!-- Viewer handled by viewer.html; no inline download script needed -->
   </body>
 </html>
