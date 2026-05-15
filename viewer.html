@@ -62,6 +62,8 @@
         var downloadBtn = document.getElementById('downloadBtn');
         var downloadFallback = document.getElementById('downloadFallback');
 
+        var isMobile = /Mobi|Android|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent || '');
+
         if(!file){
           loader.classList.add('hidden');
           error.classList.remove('hidden');
@@ -88,12 +90,35 @@
           }
         }, 10000);
 
-        // finally set the iframe src (same-origin local file will embed)
-        try{
+        // Mobile behaviour: try to open in native viewer for best experience
+        if(isMobile){
+          // give the iframe a chance, but also attempt to open the file in a new tab/window
+          // many mobile browsers prefer the native viewer and may block embedding
+          try{
+            // prefer opening in a new tab so user can use native PDF viewer
+            window.open(file, '_blank');
+          }catch(e){
+            // ignore popup-block
+          }
+          // still set iframe as fallback
           iframe.src = file;
-        }catch(e){
-          loader.classList.add('hidden');
-          error.classList.remove('hidden');
+          // update loader message for mobile
+          var msg = loader.querySelector('.message');
+          if(msg) msg.textContent = 'يُحاول فتح الملف في عارض جهازك، إن لم يُفتح استخدم زر "تحميل".';
+          // hide iframe only if it stays blank after some time (let iframe try first)
+          setTimeout(function(){
+            if(!loaded){
+              // keep error/download visible as fallback
+            }
+          }, 1200);
+        } else {
+          // desktop: embed directly
+          try{
+            iframe.src = file;
+          }catch(e){
+            loader.classList.add('hidden');
+            error.classList.remove('hidden');
+          }
         }
       })();
     </script>
