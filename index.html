@@ -415,7 +415,7 @@
       <div class="links">
         <a
           id="profilePdf"
-          href="assets/Docs/Art%20Corners%20-%20Profile.pdf"
+          href="viewer.html?file=assets/Docs/Art%20Corners%20-%20Profile.pdf"
           class="link-btn"
           target="_blank"
           rel="noopener noreferrer"
@@ -544,28 +544,6 @@
 
       <p class="footer">© 2026 ArtCorners Design</p>
     </div>
-    <script>
-      (function(){
-        var a = document.getElementById('profilePdf');
-        if(!a) return;
-        a.addEventListener('click', function(e){
-          e.preventDefault();
-          var url = this.href;
-          try {
-            window.open(url, '_blank');
-          } catch (err) {
-            // fallback: do nothing
-          }
-          // create hidden download link and click it
-          var link = document.createElement('a');
-          link.href = url;
-          link.download = 'Art-Corners-Profile.pdf';
-          link.style.display = 'none';
-          document.body.appendChild(link);
-          try { link.click(); } catch (err) {}
-          document.body.removeChild(link);
-        });
-      })();
-    </script>
+    <!-- Viewer handled by viewer.html; no inline download script needed -->
   </body>
 </html>

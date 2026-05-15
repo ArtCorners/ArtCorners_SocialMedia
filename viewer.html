@@ -1,0 +1,101 @@
+<!doctype html>
+<html lang="ar" dir="rtl">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width,initial-scale=1" />
+    <title>عرض الملف — ArtCorners</title>
+    <link
+      href="https://fonts.googleapis.com/css2?family=Cairo:wght@300;400;600;700&display=swap"
+      rel="stylesheet"
+    />
+    <style>
+      :root{--bg:#0f0f0f;--muted:#999;--accent:#bc1d25}
+      *{box-sizing:border-box}
+      html,body{height:100%;margin:0;font-family:"Cairo",sans-serif;background:var(--bg);color:#fff}
+      .topbar{height:64px;display:flex;align-items:center;justify-content:space-between;gap:12px;padding:12px 16px;border-bottom:1px solid rgba(255,255,255,0.04)}
+      .title{font-weight:600}
+      .btns{display:flex;gap:8px}
+      a.btn{background:transparent;border:1px solid rgba(255,255,255,0.08);color:#fff;padding:8px 12px;border-radius:6px;text-decoration:none}
+      a.btn:hover{border-color:var(--accent);box-shadow:0 6px 18px rgba(188,29,37,0.18)}
+      #viewer{position:fixed;inset:64px 0 0 0;background:#000}
+      iframe{width:100%;height:100%;border:0;display:block;background:#222}
+      .overlay{position:absolute;inset:0;display:flex;align-items:center;justify-content:center;flex-direction:column;color:var(--muted)}
+      .spinner{width:56px;height:56px;border-radius:50%;border:6px solid rgba(255,255,255,0.06);border-top-color:var(--accent);animation:spin 1s linear infinite;margin-bottom:12px}
+      @keyframes spin{to{transform:rotate(360deg)}}
+      .message{padding:12px;color:var(--muted);text-align:center}
+      .hidden{display:none}
+    </style>
+  </head>
+  <body>
+    <div class="topbar">
+      <div class="title">Company Profile</div>
+      <div class="btns">
+        <a id="downloadBtn" class="btn" href="#" download>تحميل</a>
+        <a class="btn" href="index.html">عودة</a>
+      </div>
+    </div>
+
+    <div id="viewer">
+      <div id="loader" class="overlay">
+        <div class="spinner"></div>
+        <div class="message">جارٍ تحميل الملف — الرجاء الانتظار...</div>
+      </div>
+
+      <iframe id="pdfFrame" src="about:blank" allowfullscreen></iframe>
+
+      <div id="error" class="overlay hidden">
+        <div class="message">عذرًا، حدث خطأ أثناء تحميل الملف.<br/><a id="downloadFallback" href="#" class="btn">تنزيل الملف</a></div>
+      </div>
+    </div>
+
+    <script>
+      (function(){
+        function getParam(name){
+          var m = new RegExp('[?&]'+name+'=([^&]*)').exec(location.search);
+          return m? decodeURIComponent(m[1].replace(/\+/g,' ')) : null;
+        }
+
+        var file = getParam('file');
+        var iframe = document.getElementById('pdfFrame');
+        var loader = document.getElementById('loader');
+        var error = document.getElementById('error');
+        var downloadBtn = document.getElementById('downloadBtn');
+        var downloadFallback = document.getElementById('downloadFallback');
+
+        if(!file){
+          loader.classList.add('hidden');
+          error.classList.remove('hidden');
+          return;
+        }
+
+        // set download links
+        downloadBtn.href = file;
+        downloadFallback.href = file;
+
+        var loaded = false;
+
+        // When iframe loads successfully, hide loader
+        iframe.onload = function(){
+          loaded = true;
+          loader.classList.add('hidden');
+        };
+
+        // set a timeout to detect load failures (iframe onerror not reliable)
+        var failTimer = setTimeout(function(){
+          if(!loaded){
+            loader.classList.add('hidden');
+            error.classList.remove('hidden');
+          }
+        }, 10000);
+
+        // finally set the iframe src (same-origin local file will embed)
+        try{
+          iframe.src = file;
+        }catch(e){
+          loader.classList.add('hidden');
+          error.classList.remove('hidden');
+        }
+      })();
+    </script>
+  </body>
+</html>
