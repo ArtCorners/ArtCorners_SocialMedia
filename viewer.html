@@ -41,15 +41,20 @@
         display: flex;
         gap: 8px;
       }
-      a.btn {
+      a.btn,
+      button.btn {
         background: transparent;
         border: 1px solid rgba(255, 255, 255, 0.08);
         color: #fff;
         padding: 8px 12px;
         border-radius: 6px;
         text-decoration: none;
+        cursor: pointer;
+        font-family: "Cairo", sans-serif;
+        font-size: 0.9rem;
       }
-      a.btn:hover {
+      a.btn:hover,
+      button.btn:hover {
         border-color: var(--accent);
         box-shadow: 0 6px 18px rgba(188, 29, 37, 0.18);
       }
@@ -57,13 +62,7 @@
         position: fixed;
         inset: 64px 0 0 0;
         background: #000;
-      }
-      iframe {
-        width: 100%;
-        height: 100%;
-        border: 0;
-        display: block;
-        background: #222;
+        overflow-y: auto;
       }
       .overlay {
         position: absolute;
@@ -73,6 +72,7 @@
         justify-content: center;
         flex-direction: column;
         color: var(--muted);
+        gap: 16px;
       }
       .spinner {
         width: 56px;
@@ -92,9 +92,100 @@
         padding: 12px;
         color: var(--muted);
         text-align: center;
+        line-height: 1.7;
       }
       .hidden {
-        display: none;
+        display: none !important;
+      }
+
+      /* Mobile action buttons */
+      .mobile-actions {
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        justify-content: center;
+        gap: 16px;
+        padding: 32px 24px;
+        text-align: center;
+      }
+      .mobile-actions .message {
+        font-size: 1rem;
+        color: var(--muted);
+      }
+      .mobile-btn-open {
+        display: inline-flex;
+        align-items: center;
+        gap: 10px;
+        padding: 14px 32px;
+        border-radius: 8px;
+        background: rgba(255, 255, 255, 0.06);
+        border: 1px solid rgba(255, 255, 255, 0.12);
+        color: #fff;
+        text-decoration: none;
+        font-family: "Cairo", sans-serif;
+        font-size: 1rem;
+        font-weight: 600;
+        transition:
+          background 0.2s,
+          border-color 0.2s;
+      }
+      .mobile-btn-open:hover {
+        background: rgba(255, 255, 255, 0.1);
+        border-color: rgba(255, 255, 255, 0.25);
+      }
+      .mobile-btn-download {
+        display: inline-flex;
+        align-items: center;
+        gap: 10px;
+        padding: 14px 32px;
+        border-radius: 8px;
+        background: rgba(188, 29, 37, 0.18);
+        border: 1px solid rgba(188, 29, 37, 0.45);
+        color: #fff;
+        text-decoration: none;
+        font-family: "Cairo", sans-serif;
+        font-size: 1rem;
+        font-weight: 600;
+        transition:
+          background 0.2s,
+          border-color 0.2s;
+      }
+      .mobile-btn-download:hover {
+        background: rgba(188, 29, 37, 0.3);
+        border-color: var(--accent);
+      }
+
+      /* PDF.js canvas viewer */
+      #pdfWrapper {
+        width: 100%;
+        min-height: calc(100vh - 64px);
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        padding: 16px;
+        background: #1a1a1a;
+      }
+      #pdfCanvas {
+        max-width: 100%;
+        box-shadow: 0 8px 32px rgba(0, 0, 0, 0.6);
+        border-radius: 4px;
+        display: block;
+        background: #fff;
+      }
+      #pdfToolbar {
+        width: 100%;
+        max-width: 800px;
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        margin-bottom: 12px;
+        flex-wrap: wrap;
+      }
+      #pageInfo {
+        color: var(--muted);
+        font-size: 0.9rem;
+        min-width: 60px;
+        text-align: center;
       }
     </style>
   </head>
@@ -108,77 +199,129 @@
     </div>
 
     <div id="viewer">
+      <!-- Loading spinner -->
       <div id="loader" class="overlay">
         <div class="spinner"></div>
         <div class="message">جارٍ تحميل الملف — الرجاء الانتظار...</div>
       </div>
 
-      <div
-        id="pdfToolbar"
-        style="
-          position: absolute;
-          top: 8px;
-          left: 8px;
-          z-index: 5;
-          display: flex;
-          gap: 8px;
-        "
-      >
-        <button id="prevBtn" class="btn">السابق</button>
-        <button id="nextBtn" class="btn">التالي</button>
-        <span
-          id="pageInfo"
-          style="align-self: center; color: var(--muted)"
-        ></span>
-        <button id="zoomOut" class="btn">-</button>
-        <button id="zoomIn" class="btn">+</button>
+      <!-- Mobile view: shown on phones/tablets -->
+      <div id="mobileView" class="overlay hidden">
+        <div class="mobile-actions">
+          <div class="message">📄 افتح الملف أو حمّله على جهازك</div>
+          <a
+            id="mobileOpenBtn"
+            href="#"
+            target="_blank"
+            rel="noopener"
+            class="mobile-btn-open"
+          >
+            <svg
+              width="18"
+              height="18"
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="currentColor"
+              stroke-width="2"
+              stroke-linecap="round"
+              stroke-linejoin="round"
+            >
+              <path
+                d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"
+              />
+              <polyline points="14 2 14 8 20 8" />
+            </svg>
+            عرض الملف
+          </a>
+          <a
+            id="mobileDownloadBtn"
+            href="#"
+            download
+            class="mobile-btn-download"
+          >
+            <svg
+              width="18"
+              height="18"
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="currentColor"
+              stroke-width="2"
+              stroke-linecap="round"
+              stroke-linejoin="round"
+            >
+              <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" />
+              <polyline points="7 10 12 15 17 10" />
+              <line x1="12" y1="15" x2="12" y2="3" />
+            </svg>
+            تحميل الملف
+          </a>
+        </div>
       </div>
 
-      <canvas
-        id="pdfCanvas"
-        style="width: 100%; height: 100%; display: block; background: #222"
-      ></canvas>
+      <!-- Desktop PDF.js viewer -->
+      <div id="pdfWrapper" class="hidden">
+        <div id="pdfToolbar">
+          <button id="prevBtn" class="btn">السابق</button>
+          <button id="nextBtn" class="btn">التالي</button>
+          <span id="pageInfo"></span>
+          <button id="zoomOut" class="btn">−</button>
+          <button id="zoomIn" class="btn">+</button>
+        </div>
+        <canvas id="pdfCanvas"></canvas>
+      </div>
 
+      <!-- Error state -->
       <div id="error" class="overlay hidden">
         <div class="message">
           عذرًا، حدث خطأ أثناء تحميل الملف أو المتصفح يمنع الوصول.<br />
+          <br />
           <a id="downloadFallback" href="#" class="btn">تنزيل الملف</a>
         </div>
       </div>
     </div>
+
     <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.9.179/pdf.min.js"></script>
     <script>
       (function () {
         var params = new URLSearchParams(location.search);
         var file = params.get("file");
+
         var loader = document.getElementById("loader");
         var error = document.getElementById("error");
+        var mobileView = document.getElementById("mobileView");
+        var pdfWrapper = document.getElementById("pdfWrapper");
         var downloadBtn = document.getElementById("downloadBtn");
         var downloadFallback = document.getElementById("downloadFallback");
+        var mobileOpenBtn = document.getElementById("mobileOpenBtn");
+        var mobileDownloadBtn = document.getElementById("mobileDownloadBtn");
 
+        // No file param
         if (!file) {
           loader.classList.add("hidden");
           error.classList.remove("hidden");
           return;
         }
 
+        // Set download links
         downloadBtn.href = file;
-        downloadBtn.setAttribute("target", "_blank");
         downloadFallback.href = file;
+        mobileOpenBtn.href = file;
+        mobileDownloadBtn.href = file;
 
+        // Detect mobile
         var isMobile =
           /Mobi|Android|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(
             navigator.userAgent || "",
           );
+
         if (isMobile) {
-          // mobile: open in native viewer
-          try {
-            window.location.href = file;
-            return;
-          } catch (e) {}
+          // Show mobile action buttons instead of PDF.js viewer
+          loader.classList.add("hidden");
+          mobileView.classList.remove("hidden");
+          return;
         }
 
-        // PDF.js setup
+        // ── Desktop: PDF.js renderer ──────────────────────────────────────────
         pdfjsLib.GlobalWorkerOptions.workerSrc =
           "https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.9.179/pdf.worker.min.js";
 
@@ -186,7 +329,8 @@
         var ctx = canvas.getContext("2d");
         var currentPage = 1;
         var pdfDoc = null;
-        var scale = 1.0;
+        var scale = 1.2;
+        var rendering = false;
 
         var prevBtn = document.getElementById("prevBtn");
         var nextBtn = document.getElementById("nextBtn");
@@ -195,70 +339,75 @@
         var zoomOut = document.getElementById("zoomOut");
 
         function renderPage(num) {
+          if (rendering) return;
+          rendering = true;
           loader.classList.remove("hidden");
+
           pdfDoc
             .getPage(num)
             .then(function (page) {
-              var viewport = page.getViewport({ scale: scale });
-              // set canvas size in device pixels for crisp rendering
               var ratio = window.devicePixelRatio || 1;
+              var viewport = page.getViewport({ scale: scale });
+
               canvas.width = Math.floor(viewport.width * ratio);
               canvas.height = Math.floor(viewport.height * ratio);
               canvas.style.width = Math.floor(viewport.width) + "px";
               canvas.style.height = Math.floor(viewport.height) + "px";
-              var renderContext = {
-                canvasContext: ctx,
-                viewport: page.getViewport({ scale: scale * ratio }),
-              };
+
               page
-                .render(renderContext)
+                .render({
+                  canvasContext: ctx,
+                  viewport: page.getViewport({ scale: scale * ratio }),
+                })
                 .promise.then(function () {
+                  rendering = false;
                   loader.classList.add("hidden");
                   pageInfo.textContent = num + " / " + pdfDoc.numPages;
                 })
-                .catch(function (err) {
+                .catch(function () {
+                  rendering = false;
                   loader.classList.add("hidden");
                   error.classList.remove("hidden");
                 });
             })
-            .catch(function (err) {
+            .catch(function () {
+              rendering = false;
               loader.classList.add("hidden");
               error.classList.remove("hidden");
             });
         }
 
-        function queueRender(num) {
-          if (pdfDoc) renderPage(num);
-        }
-
         prevBtn.addEventListener("click", function () {
           if (currentPage <= 1) return;
           currentPage--;
-          queueRender(currentPage);
-        });
-        nextBtn.addEventListener("click", function () {
-          if (currentPage >= pdfDoc.numPages) return;
-          currentPage++;
-          queueRender(currentPage);
-        });
-        zoomIn.addEventListener("click", function () {
-          scale = Math.min(3, scale + 0.25);
-          queueRender(currentPage);
-        });
-        zoomOut.addEventListener("click", function () {
-          scale = Math.max(0.5, scale - 0.25);
-          queueRender(currentPage);
+          renderPage(currentPage);
         });
 
-        // load the pdf
-        var loadingTask = pdfjsLib.getDocument(file);
-        loadingTask.promise
-          .then(function (pdf) {
+        nextBtn.addEventListener("click", function () {
+          if (!pdfDoc || currentPage >= pdfDoc.numPages) return;
+          currentPage++;
+          renderPage(currentPage);
+        });
+
+        zoomIn.addEventListener("click", function () {
+          scale = Math.min(3, scale + 0.25);
+          renderPage(currentPage);
+        });
+
+        zoomOut.addEventListener("click", function () {
+          scale = Math.max(0.5, scale - 0.25);
+          renderPage(currentPage);
+        });
+
+        // Load PDF
+        pdfjsLib
+          .getDocument(file)
+          .promise.then(function (pdf) {
             pdfDoc = pdf;
-            // initially render first page
+            pdfWrapper.classList.remove("hidden");
             renderPage(currentPage);
           })
-          .catch(function (err) {
+          .catch(function () {
             loader.classList.add("hidden");
             error.classList.remove("hidden");
           });
