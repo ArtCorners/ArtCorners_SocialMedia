@@ -9,21 +9,93 @@
       rel="stylesheet"
     />
     <style>
-      :root{--bg:#0f0f0f;--muted:#999;--accent:#bc1d25}
-      *{box-sizing:border-box}
-      html,body{height:100%;margin:0;font-family:"Cairo",sans-serif;background:var(--bg);color:#fff}
-      .topbar{height:64px;display:flex;align-items:center;justify-content:space-between;gap:12px;padding:12px 16px;border-bottom:1px solid rgba(255,255,255,0.04)}
-      .title{font-weight:600}
-      .btns{display:flex;gap:8px}
-      a.btn{background:transparent;border:1px solid rgba(255,255,255,0.08);color:#fff;padding:8px 12px;border-radius:6px;text-decoration:none}
-      a.btn:hover{border-color:var(--accent);box-shadow:0 6px 18px rgba(188,29,37,0.18)}
-      #viewer{position:fixed;inset:64px 0 0 0;background:#000}
-      iframe{width:100%;height:100%;border:0;display:block;background:#222}
-      .overlay{position:absolute;inset:0;display:flex;align-items:center;justify-content:center;flex-direction:column;color:var(--muted)}
-      .spinner{width:56px;height:56px;border-radius:50%;border:6px solid rgba(255,255,255,0.06);border-top-color:var(--accent);animation:spin 1s linear infinite;margin-bottom:12px}
-      @keyframes spin{to{transform:rotate(360deg)}}
-      .message{padding:12px;color:var(--muted);text-align:center}
-      .hidden{display:none}
+      :root {
+        --bg: #0f0f0f;
+        --muted: #999;
+        --accent: #bc1d25;
+      }
+      * {
+        box-sizing: border-box;
+      }
+      html,
+      body {
+        height: 100%;
+        margin: 0;
+        font-family: "Cairo", sans-serif;
+        background: var(--bg);
+        color: #fff;
+      }
+      .topbar {
+        height: 64px;
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: 12px;
+        padding: 12px 16px;
+        border-bottom: 1px solid rgba(255, 255, 255, 0.04);
+      }
+      .title {
+        font-weight: 600;
+      }
+      .btns {
+        display: flex;
+        gap: 8px;
+      }
+      a.btn {
+        background: transparent;
+        border: 1px solid rgba(255, 255, 255, 0.08);
+        color: #fff;
+        padding: 8px 12px;
+        border-radius: 6px;
+        text-decoration: none;
+      }
+      a.btn:hover {
+        border-color: var(--accent);
+        box-shadow: 0 6px 18px rgba(188, 29, 37, 0.18);
+      }
+      #viewer {
+        position: fixed;
+        inset: 64px 0 0 0;
+        background: #000;
+      }
+      iframe {
+        width: 100%;
+        height: 100%;
+        border: 0;
+        display: block;
+        background: #222;
+      }
+      .overlay {
+        position: absolute;
+        inset: 0;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        flex-direction: column;
+        color: var(--muted);
+      }
+      .spinner {
+        width: 56px;
+        height: 56px;
+        border-radius: 50%;
+        border: 6px solid rgba(255, 255, 255, 0.06);
+        border-top-color: var(--accent);
+        animation: spin 1s linear infinite;
+        margin-bottom: 12px;
+      }
+      @keyframes spin {
+        to {
+          transform: rotate(360deg);
+        }
+      }
+      .message {
+        padding: 12px;
+        color: var(--muted);
+        text-align: center;
+      }
+      .hidden {
+        display: none;
+      }
     </style>
   </head>
   <body>
@@ -41,30 +113,31 @@
         <div class="message">جارٍ تحميل الملف — الرجاء الانتظار...</div>
       </div>
 
-      <iframe id="pdfFrame" src="about:blank" allowfullscreen></iframe>
+      <object id="pdfObject" data="about:blank" type="application/pdf" width="100%" height="100%">
+        <div class="message">متصفحك لا يدعم عرض PDF داخل الصفحة. <a id="downloadFallbackInner" class="btn" href="#">تنزيل الملف</a></div>
+      </object>
 
       <div id="error" class="overlay hidden">
-        <div class="message">عذرًا، حدث خطأ أثناء تحميل الملف.<br/><a id="downloadFallback" href="#" class="btn">تنزيل الملف</a></div>
+        <div class="message">
+          عذرًا، حدث خطأ أثناء تحميل الملف.<br />
+          <a id="downloadFallback" href="#" class="btn">تنزيل الملف</a>
+        </div>
       </div>
     </div>
-
     <script>
-      (function(){
-        function getParam(name){
-          var m = new RegExp('[?&]'+name+'=([^&]*)').exec(location.search);
-          return m? decodeURIComponent(m[1].replace(/\+/g,' ')) : null;
-        }
-
-        var file = getParam('file');
-        var iframe = document.getElementById('pdfFrame');
+      (function () {
+        var params = new URLSearchParams(location.search);
+        var file = params.get('file');
+        var pdfObject = document.getElementById('pdfObject');
         var loader = document.getElementById('loader');
         var error = document.getElementById('error');
         var downloadBtn = document.getElementById('downloadBtn');
         var downloadFallback = document.getElementById('downloadFallback');
+        var downloadFallbackInner = document.getElementById('downloadFallbackInner');
 
         var isMobile = /Mobi|Android|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent || '');
 
-        if(!file){
+        if (!file) {
           loader.classList.add('hidden');
           error.classList.remove('hidden');
           return;
@@ -72,53 +145,31 @@
 
         // set download links
         downloadBtn.href = file;
+        downloadBtn.setAttribute('target','_blank');
         downloadFallback.href = file;
+        downloadFallbackInner.href = file;
 
-        var loaded = false;
+        // Mobile: redirect to native viewer for best UX
+        if (isMobile) {
+          try { window.location.href = file; return; } catch(e){}
+        }
 
-        // When iframe loads successfully, hide loader
-        iframe.onload = function(){
-          loaded = true;
-          loader.classList.add('hidden');
-        };
-
-        // set a timeout to detect load failures (iframe onerror not reliable)
-        var failTimer = setTimeout(function(){
-          if(!loaded){
-            loader.classList.add('hidden');
-            error.classList.remove('hidden');
-          }
-        }, 10000);
-
-        // Mobile behaviour: try to open in native viewer for best experience
-        if(isMobile){
-          // give the iframe a chance, but also attempt to open the file in a new tab/window
-          // many mobile browsers prefer the native viewer and may block embedding
-          try{
-            // prefer opening in a new tab so user can use native PDF viewer
-            window.open(file, '_blank');
-          }catch(e){
-            // ignore popup-block
-          }
-          // still set iframe as fallback
-          iframe.src = file;
-          // update loader message for mobile
-          var msg = loader.querySelector('.message');
-          if(msg) msg.textContent = 'يُحاول فتح الملف في عارض جهازك، إن لم يُفتح استخدم زر "تحميل".';
-          // hide iframe only if it stays blank after some time (let iframe try first)
+        // Desktop: embed using <object>; if browser can't render, user can download
+        try {
+          pdfObject.data = file;
+          // hide loader after short delay to give renderer time
+          setTimeout(function(){ loader.classList.add('hidden'); }, 800);
+          // final fallback: if object still blank after longer delay, show download
           setTimeout(function(){
-            if(!loaded){
-              // keep error/download visible as fallback
+            // we can't reliably detect object failure across browsers, so show error area as optional help
+            if (!pdfObject.data || pdfObject.data === 'about:blank'){
+              loader.classList.add('hidden');
+              error.classList.remove('hidden');
             }
-          }, 1200);
-        } else {
-          // desktop: embed directly
-          try{
-            iframe.src = file;
-          }catch(e){
-            loader.classList.add('hidden');
-            error.classList.remove('hidden');
-          }
+          }, 6000);
+        } catch(err){
+          loader.classList.add('hidden');
+          error.classList.remove('hidden');
         }
       })();
     </script>
