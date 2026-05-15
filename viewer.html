@@ -113,64 +113,155 @@
         <div class="message">جارٍ تحميل الملف — الرجاء الانتظار...</div>
       </div>
 
-      <object id="pdfObject" data="about:blank" type="application/pdf" width="100%" height="100%">
-        <div class="message">متصفحك لا يدعم عرض PDF داخل الصفحة. <a id="downloadFallbackInner" class="btn" href="#">تنزيل الملف</a></div>
-      </object>
+      <div
+        id="pdfToolbar"
+        style="
+          position: absolute;
+          top: 8px;
+          left: 8px;
+          z-index: 5;
+          display: flex;
+          gap: 8px;
+        "
+      >
+        <button id="prevBtn" class="btn">السابق</button>
+        <button id="nextBtn" class="btn">التالي</button>
+        <span
+          id="pageInfo"
+          style="align-self: center; color: var(--muted)"
+        ></span>
+        <button id="zoomOut" class="btn">-</button>
+        <button id="zoomIn" class="btn">+</button>
+      </div>
+
+      <canvas
+        id="pdfCanvas"
+        style="width: 100%; height: 100%; display: block; background: #222"
+      ></canvas>
 
       <div id="error" class="overlay hidden">
         <div class="message">
-          عذرًا، حدث خطأ أثناء تحميل الملف.<br />
+          عذرًا، حدث خطأ أثناء تحميل الملف أو المتصفح يمنع الوصول.<br />
           <a id="downloadFallback" href="#" class="btn">تنزيل الملف</a>
         </div>
       </div>
     </div>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.9.179/pdf.min.js"></script>
     <script>
       (function () {
         var params = new URLSearchParams(location.search);
-        var file = params.get('file');
-        var pdfObject = document.getElementById('pdfObject');
-        var loader = document.getElementById('loader');
-        var error = document.getElementById('error');
-        var downloadBtn = document.getElementById('downloadBtn');
-        var downloadFallback = document.getElementById('downloadFallback');
-        var downloadFallbackInner = document.getElementById('downloadFallbackInner');
-
-        var isMobile = /Mobi|Android|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent || '');
+        var file = params.get("file");
+        var loader = document.getElementById("loader");
+        var error = document.getElementById("error");
+        var downloadBtn = document.getElementById("downloadBtn");
+        var downloadFallback = document.getElementById("downloadFallback");
 
         if (!file) {
-          loader.classList.add('hidden');
-          error.classList.remove('hidden');
+          loader.classList.add("hidden");
+          error.classList.remove("hidden");
           return;
         }
 
-        // set download links
         downloadBtn.href = file;
-        downloadBtn.setAttribute('target','_blank');
+        downloadBtn.setAttribute("target", "_blank");
         downloadFallback.href = file;
-        downloadFallbackInner.href = file;
 
-        // Mobile: redirect to native viewer for best UX
+        var isMobile =
+          /Mobi|Android|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(
+            navigator.userAgent || "",
+          );
         if (isMobile) {
-          try { window.location.href = file; return; } catch(e){}
+          // mobile: open in native viewer
+          try {
+            window.location.href = file;
+            return;
+          } catch (e) {}
         }
 
-        // Desktop: embed using <object>; if browser can't render, user can download
-        try {
-          pdfObject.data = file;
-          // hide loader after short delay to give renderer time
-          setTimeout(function(){ loader.classList.add('hidden'); }, 800);
-          // final fallback: if object still blank after longer delay, show download
-          setTimeout(function(){
-            // we can't reliably detect object failure across browsers, so show error area as optional help
-            if (!pdfObject.data || pdfObject.data === 'about:blank'){
-              loader.classList.add('hidden');
-              error.classList.remove('hidden');
-            }
-          }, 6000);
-        } catch(err){
-          loader.classList.add('hidden');
-          error.classList.remove('hidden');
+        // PDF.js setup
+        pdfjsLib.GlobalWorkerOptions.workerSrc =
+          "https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.9.179/pdf.worker.min.js";
+
+        var canvas = document.getElementById("pdfCanvas");
+        var ctx = canvas.getContext("2d");
+        var currentPage = 1;
+        var pdfDoc = null;
+        var scale = 1.0;
+
+        var prevBtn = document.getElementById("prevBtn");
+        var nextBtn = document.getElementById("nextBtn");
+        var pageInfo = document.getElementById("pageInfo");
+        var zoomIn = document.getElementById("zoomIn");
+        var zoomOut = document.getElementById("zoomOut");
+
+        function renderPage(num) {
+          loader.classList.remove("hidden");
+          pdfDoc
+            .getPage(num)
+            .then(function (page) {
+              var viewport = page.getViewport({ scale: scale });
+              // set canvas size in device pixels for crisp rendering
+              var ratio = window.devicePixelRatio || 1;
+              canvas.width = Math.floor(viewport.width * ratio);
+              canvas.height = Math.floor(viewport.height * ratio);
+              canvas.style.width = Math.floor(viewport.width) + "px";
+              canvas.style.height = Math.floor(viewport.height) + "px";
+              var renderContext = {
+                canvasContext: ctx,
+                viewport: page.getViewport({ scale: scale * ratio }),
+              };
+              page
+                .render(renderContext)
+                .promise.then(function () {
+                  loader.classList.add("hidden");
+                  pageInfo.textContent = num + " / " + pdfDoc.numPages;
+                })
+                .catch(function (err) {
+                  loader.classList.add("hidden");
+                  error.classList.remove("hidden");
+                });
+            })
+            .catch(function (err) {
+              loader.classList.add("hidden");
+              error.classList.remove("hidden");
+            });
         }
+
+        function queueRender(num) {
+          if (pdfDoc) renderPage(num);
+        }
+
+        prevBtn.addEventListener("click", function () {
+          if (currentPage <= 1) return;
+          currentPage--;
+          queueRender(currentPage);
+        });
+        nextBtn.addEventListener("click", function () {
+          if (currentPage >= pdfDoc.numPages) return;
+          currentPage++;
+          queueRender(currentPage);
+        });
+        zoomIn.addEventListener("click", function () {
+          scale = Math.min(3, scale + 0.25);
+          queueRender(currentPage);
+        });
+        zoomOut.addEventListener("click", function () {
+          scale = Math.max(0.5, scale - 0.25);
+          queueRender(currentPage);
+        });
+
+        // load the pdf
+        var loadingTask = pdfjsLib.getDocument(file);
+        loadingTask.promise
+          .then(function (pdf) {
+            pdfDoc = pdf;
+            // initially render first page
+            renderPage(currentPage);
+          })
+          .catch(function (err) {
+            loader.classList.add("hidden");
+            error.classList.remove("hidden");
+          });
       })();
     </script>
   </body>
